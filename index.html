@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitectura y Gestión de Sistemas Operativos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* CONFIGURACIÓN GLOBAL */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #090d16;
+            font-family: 'Urbanist', sans-serif;
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* CONTENEDOR DE CADA DIAPOSITIVA (PROPORCIÓN 16:9) */
+        .deck-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 1280px;
+            max-height: 720px;
+            position: relative;
+            background-color: #020617;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* EFECTOS DE FONDO NEÓN GLOW */
+        .deck-container::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            right: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .deck-container::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            left: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(222, 255, 154, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* SISTEMA DE NAVEGACIÓN ENTRE SLIDES */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            z-index: 2;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 3;
+        }
+
+        /* TIPOGRAFÍA Y TEXTO */
+        h1 { font-size: 64px; font-weight: 700; color: #f8fafc; line-height: 1.1; margin-bottom: 10px; }
+        h1 span { color: #deff9a; }
+        h2.slide-title { font-size: 36px; font-weight: 600; color: #deff9a; margin-bottom: 35px; border-left: 5px solid #deff9a; padding-left: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        h3 { font-size: 26px; color: #38bdf8; margin-bottom: 12px; font-weight: 600; }
+        p, li { font-size: 19px; line-height: 1.6; color: #cbd5e1; }
+        ul { list-style-position: inside; margin-top: 10px; }
+        li { margin-bottom: 8px; }
+        code { font-family: 'Fira Code', monospace; color: #deff9a; background: #1e293b; padding: 3px 8px; border-radius: 4px; font-size: 17px; }
+
+        /* ESTILOS DE COMPONENTES INTERNOS */
+        .content-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #0b1329; border-radius: 8px; overflow: hidden; }
+        th { background: #1e293b; color: #deff9a; text-align: left; padding: 18px; font-size: 20px; border-bottom: 2px solid #334155; }
+        td { padding: 16px 18px; border-bottom: 1px solid #22314d; vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+
+        .tiled-content { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-top: 10px; }
+        .tile { background: #0f172a; border: 1px solid #334155; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        .tile .icon { font-size: 36px; color: #deff9a; margin-bottom: 15px; }
+
+        .timeline-layout { display: flex; justify-content: space-between; position: relative; margin-top: 40px; }
+        .timeline-item { width: 22%; text-align: center; z-index: 2; }
+        .timeline-dot { width: 18px; height: 18px; background: #deff9a; border-radius: 50%; margin: 0 auto 15px; box-shadow: 0 0 12px #deff9a; }
+        .timeline-line { position: absolute; top: 9px; left: 10%; right: 10%; height: 2px; background: #334155; z-index: 1; }
+
+        /* INTERFAZ DE CONTROLES INFERIORES */
+        .controls-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 60px;
+            right: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            border-top: 1px solid rgba(51, 65, 85, 0.4);
+            padding-top: 15px;
+        }
+        .nav-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+        .nav-btn:hover { background: #deff9a; color: #020617; border-color: #deff9a; }
+        .progress-indicator { font-size: 14px; color: #64748b; letter-spacing: 1px; }
+
+        /* PORTADA VARIACIÓN */
+        .slide-cover { text-align: center; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div class="deck-container">
+
+    <div class="slide slide-cover active">
+        <p style="text-transform: uppercase; letter-spacing: 5px; color: #38bdf8; font-weight: 700; margin-bottom: 10px; font-size: 16px;">Sistemas Operativos</p>
+        <h1>Arquitectura y Gestión de <span>Sistemas Operativos</span></h1>
+        <p style="font-size: 24px; color: #94a3b8; margin-top: 15px;">Resolución Técnica de Casos de Estudio</p>
+        <div style="margin-top: 50px; font-size: 16px; color: #64748b; line-height: 1.8;">
+            <p><strong>Desarrollo de Software / TIC</strong></p>
+        </div>
+    </div>
+
+    <div class="slide slide-cover">
+        <p style="color: #deff9a; font-weight: 700; letter-spacing: 2px;">BLOQUE 01</p>
+        <h1 style="font-size: 52px;">Análisis Arquitectónico y<br><span>Gestión de Recursos</span></h1>
+        <div style="width: 80px; height: 3px; background: #deff9a; margin: 25px auto;"></div>
+        <p style="max-width: 750px; color: #94a3b8;">Diagnóstico de cuellos de botella en servidores Ubuntu Server y mecanismos de protección de memoria.</p>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title" style="color: #f87171; border-left-color: #f87171;">Contexto: El Problema</h2>
+        <div class="content-area">
+            <div style="background: #111827; border: 1px solid #334155; border-left: 5px solid #f87171; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <h3 style="color: #f8fafc; font-size: 28px; margin-bottom: 20px;"><i class="fa-solid fa-server" style="color: #f87171; margin-right: 10px;"></i> Ralentización del Servidor Central</h3>
+                <p style="font-size: 22px; line-height: 1.7; color: #cbd5e1;">
+                    El servidor central de renderizado (Ubuntu Server) se ha <strong>ralentizado drásticamente</strong> porque varios diseñadores lanzaron scripts automáticos de transcodificación de video 4K y análisis de metadatos pesados a la vez. El equipo de TI nota que el sistema está al límite.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">1. Clasificación de la Infraestructura</h2>
+        <div class="content-area">
+            <p style="margin-bottom: 20px;">Ante la saturación del servidor por tareas simultáneas de transcodificación 4K, los componentes se categorizan de la siguiente manera:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th><i class="fa-solid fa-microchip" style="color:#deff9a;margin-right:8px;"></i> Hardware</th>
+                        <th><i class="fa-solid fa-laptop-code" style="color:#deff9a;margin-right:8px;"></i> Software (Apps)</th>
+                        <th><i class="fa-solid fa-network-wired" style="color:#deff9a;margin-right:8px;"></i> Recursos Lógicos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>• Memoria RAM:</strong> Almacenamiento volátil de trabajo.<br>
+                            <strong>• Procesador (CPU):</strong> Cómputo bruto multihilo.<br>
+                            <strong>• Disco NVMe:</strong> I/O de alta velocidad para assets.
+                        </td>
+                        <td>
+                            <strong>• Compilador Python:</strong> Intérprete que ejecuta los scripts de automatización.<br>
+                            <strong>• Base de Datos:</strong> Instancia PostgreSQL que almacena los metadatos.
+                        </td>
+                        <td>
+                            <strong>• Demonios (Systemd):</strong> Gestión de procesos del ciclo de vida del servidor.<br>
+                            <strong>• Puertos de Red:</strong> Sockets abiertos para transferencia de ingesta multimedia.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">2. Aislamiento de Memoria Virtual</h2>
+        <div class="content-area">
+            <div class="two-column">
+                <div>
+                    <h3>El Rol de la MMU</h3>
+                    <p>Para evitar la corrupción cruzada entre renders paralelos de distintos diseñadores, el procesador implementa aislamiento por hardware:</p>
+                    <ul style="margin-top: 15px;">
+                        <li><strong>MMU (Memory Management Unit):</strong> Traduce las direcciones de memoria virtual del proceso a direcciones físicas reales.</li>
+                        <li><strong>Protección de Memoria:</strong> El Kernel restringe que un proceso acceda al espacio asignado a otro.</li>
+                    </ul>
+                </div>
+                <div class="tile" style="border-left: 4px solid #f87171; background: #111827;">
+                    <h3 style="color: #f87171;"><i class="fa-solid fa-triangle-exclamation"></i> Consecuencias de Fallo</h3>
+                    <p style="margin-top: 10px; font-size: 17px;"><strong>Segmentation Fault:</strong> Terminación inmediata del proceso infractor por violación de direccionamiento.</p>
+                    <p style="margin-top: 10px; font-size: 17px;"><strong>Data Leakage:</strong> Riesgo crítico de fuga de datos confidenciales entre proyectos de clientes en el mismo espacio físico.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide slide-cover">
+        <p style="color: #38bdf8; font-weight: 700; letter-spacing: 2px;">BLOQUE 02</p>
+        <h1 style="font-size: 52px;">Ecosistemas y<br><span>Modelos de Negocio</span></h1>
+        <div style="width: 80px; height: 3px; background: #38bdf8; margin: 25px auto;"></div>
+        <p style="max-width: 750px; color: #94a3b8;">Toma de decisiones de TI: Evaluación de dependencias, costos de licenciamiento y abstracción multiplataforma.</p>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title" style="color: #f87171; border-left-color: #f87171;">Contexto: El Problema</h2>
+        <div class="content-area">
+            <div style="background: #111827; border: 1px solid #334155; border-left: 5px solid #f87171; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <h3 style="color: #f8fafc; font-size: 28px; margin-bottom: 20px;"><i class="fa-solid fa-comments-dollar" style="color: #f87171; margin-right: 10px;"></i> Debate del Ecosistema</h3>
+                <p style="font-size: 22px; line-height: 1.7; color: #cbd5e1;">
+                    La gerencia del estudio debate <strong>qué ecosistema usar para reducir costos</strong> sin perder la potencia que exigen los editores de video y diseñadores 3D para llevar a cabo sus proyectos sin interrupciones.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">3. Matriz de Decisión Estratégica</h2>
+        <div class="content-area">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimensión</th>
+                        <th>Sistemas Abiertos (Ubuntu Server)</th>
+                        <th>Sistemas Propietarios (macOS)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Dependencia de Proveedor</strong></td>
+                        <td><span style="color:#4ade80;">Nula.</span> Modificaciones internas sin restricciones del fabricante (Vendor Lock-in libre).</td>
+                        <td><span style="color:#f87171;">Alta.</span> Apple controla rígidamente el ciclo de vida del software y la compatibilidad de hardware.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Auditoría de Código</strong></td>
+                        <td><span style="color:#4ade80;">Total.</span> Permite revisar el código fuente línea por línea para mitigar filtraciones antes del estreno.</td>
+                        <td><span style="color:#f87171;">Cerrado.</span> Secreto comercial corporativo; se depende de los parches oficiales del fabricante.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Costo Total (TCO)</strong></td>
+                        <td><span style="color:#4ade80;">$0 en licencias.</span> El presupuesto se optimiza e invierte en hardware NVMe y soporte técnico.</td>
+                        <td><span style="color:#f87171;">Elevado.</span> Alta inversión requerida para estaciones de trabajo premium de nivel Mac Studio / Mac Pro.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">4. El Factor Multiplataforma</h2>
+        <div class="content-area">
+            <div class="two-column">
+                <div>
+                    <h3>Convivencia ARM y x86_64</h3>
+                    <p>Los editores usan estaciones <strong>Mac (Apple Silicon - ARM)</strong> integradas con un servidor de renderizado <strong>Linux (Intel/AMD - x86_64)</strong> sin fricciones de compatibilidad gracias a dos capas clave:</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="background:#1e293b; padding:15px; border-radius:8px;">
+                        <h4 style="color:#deff9a; font-size:18px; margin-bottom:5px;"><i class="fa-solid fa-layer-group"></i> 1. System Calls (Llamadas al Sistema)</h4>
+                        <p style="font-size:16px;">El SO expone una interfaz abstracta idéntica para el software, aislando los binarios de la arquitectura del procesador.</p>
+                    </div>
+                    <div style="background:#1e293b; padding:15px; border-radius:8px;">
+                        <h4 style="color:#38bdf8; font-size:18px; margin-bottom:5px;"><i class="fa-solid fa-code-branch"></i> 2. Drivers como Traductores</h4>
+                        <p style="font-size:16px;">Los controladores traducen de manera nativa estas peticiones de software abstracto a las señales eléctricas específicas de cada procesador.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide slide-cover">
+        <p style="color: #deff9a; font-weight: 700; letter-spacing: 2px;">BLOQUE 03</p>
+        <h1 style="font-size: 52px;">Inmersión en la<br><span>Arquitectura y CLI</span></h1>
+        <div style="width: 80px; height: 3px; background: #deff9a; margin: 25px auto;"></div>
+        <p style="max-width: 750px; color: #94a3b8;">Flujo de ejecución interna de comandos, administración de almacenamiento, monitoreo y auditoría de permisos.</p>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title" style="color: #f87171; border-left-color: #f87171;">Contexto: El Problema</h2>
+        <div class="content-area">
+            <div style="background: #111827; border: 1px solid #334155; border-left: 5px solid #f87171; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);">
+                <h3 style="color: #f8fafc; font-size: 28px; margin-bottom: 20px;"><i class="fa-solid fa-terminal" style="color: #f87171; margin-right: 10px;"></i> Falla Crítica en la Consola</h3>
+                <p style="font-size: 22px; line-height: 1.7; color: #cbd5e1;">
+                    Hay un error al intentar <strong>guardar un proyecto final desde la consola de comandos</strong> de un editor y el administrador de TI debe auditar rápidamente el flujo del sistema para solucionar el colapso.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">5. Viaje de un Comando en el Sistema (`ls`)</h2>
+        <div class="content-area">
+            <div class="timeline-layout">
+                <div class="timeline-line"></div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <h3>1. Shell</h3>
+                    <p style="font-size: 15px;">Interpreta la sintaxis del administrador y localiza el binario ejecutable en el PATH.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background:#38bdf8; box-shadow: 0 0 12px #38bdf8;"></div>
+                    <h3>2. Kernel</h3>
+                    <p style="font-size: 15px;">Recibe la petición vía System Calls (<code>fork()</code> y <code>execve()</code>) para iniciar el hilo.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <h3>3. Drivers</h3>
+                    <p style="font-size: 15px;">Traducen la llamada a bajo nivel y leen físicamente los bloques de memoria del disco NVMe.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background:#38bdf8; box-shadow: 0 0 12px #38bdf8;"></div>
+                    <h3>4. Salida</h3>
+                    <p style="font-size: 15px;">El Kernel formatea los bytes crudos y el Shell renderiza la lista de archivos legible.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">6. Mitigación de Crisis en Consola</h2>
+        <div class="content-area">
+            <div class="tiled-content">
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-hard-drive"></i></div>
+                    <h3>Almacenamiento</h3>
+                    <p style="margin-bottom: 10px;">El volumen multimedia reporta llenado súbito.</p>
+                    <p><code>df -h</code></p>
+                    <p style="font-size: 14px; color:#64748b; margin-top:8px;">Muestra espacio libre/usado en formato legible (Gigabytes/Terabytes).</p>
+                </div>
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <h3>Rendimiento</h3>
+                    <p style="margin-bottom: 10px;">Identificación del script colgado de transcodificación.</p>
+                    <p><code>top</code> / <code>htop</code></p>
+                    <p style="font-size: 14px; color:#64748b; margin-top:8px;">Monitoreo interactivo en tiempo real de carga de CPU, RAM y PIDs.</p>
+                </div>
+                <div class="tile">
+                    <div class="icon"><i class="fa-solid fa-bolt"></i></div>
+                    <h3>Finalización</h3>
+                    <p style="margin-bottom: 10px;">Forzar el cierre inmediato del proceso crítico bloqueado.</p>
+                    <p><code>kill -9 4502</code></p>
+                    <p style="font-size: 14px; color:#64748b; margin-top:8px;">Envía señal <code>SIGKILL</code> que el Kernel ejecuta de inmediato omitiendo limpieza intermedia.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <h2 class="slide-title">7. Auditoría de Permisos de Seguridad</h2>
+        <div class="content-area">
+            <p style="margin-bottom: 20px;">Análisis de la máscara de protección del archivo crítico del servidor de renderizado:</p>
+            <div style="background: #111827; padding: 20px; border-radius: 8px; font-family: 'Fira Code', monospace; font-size: 26px; text-align: center; color: #deff9a; border: 1px solid #334155; margin-bottom: 30px;">
+                - rwx r-x r-- &nbsp;&nbsp;1 &nbsp;&nbsp;root &nbsp;&nbsp;root &nbsp;&nbsp;config.conf
+            </div>
+            <div class="tiled-content">
+                <div class="tile" style="border-top: 3px solid #deff9a;">
+                    <h3 style="font-size:18px; color:#deff9a;">Dueño (root)</h3>
+                    <p style="font-family:'Fira Code'; font-size: 22px; margin: 10px 0;">rwx</p>
+                    <p style="font-size:15px; color:#94a3b8;">Control absoluto. Lectura, escritura/modificación y ejecución de scripts.</p>
+                </div>
+                <div class="tile" style="border-top: 3px solid #38bdf8;">
+                    <h3 style="font-size:18px; color:#38bdf8;">Grupo (TI/Diseño)</h3>
+                    <p style="font-family:'Fira Code'; font-size: 22px; margin: 10px 0;">r-x</p>
+                    <p style="font-size:15px; color:#94a3b8;">Lectura de configuración y ejecución del renderizador, imposibilitado para alterar el archivo maestro.</p>
+                </div>
+                <div class="tile" style="border-top: 3px solid #f87171;">
+                    <h3 style="font-size:18px; color:#f87171;">Otros (Externos)</h3>
+                    <p style="font-family:'Fira Code'; font-size: 22px; margin: 10px 0;">r--</p>
+                    <p style="font-size:15px; color:#94a3b8;">Restricción estricta de solo lectura. Evita manipulaciones maliciosas o accidentales desde fuera de la red local.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <button class="nav-btn" id="prevBtn"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+        <span class="progress-indicator" id="progress">DIAPOSITIVA 1 DE 14</span>
+        <button class="nav-btn" id="nextBtn">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const progress = document.getElementById('progress');
+    let currentIdx = 0;
+
+    function updatePresentation() {
+        slides.forEach((slide, idx) => {
+            if(idx === currentIdx) {
+                slide.classList.add('active');
+            } else {
+                slide.classList.remove('active');
+            }
+        });
+        progress.innerText = `DIAPOSITIVA ${currentIdx + 1} DE ${slides.length}`;
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if(currentIdx < slides.length - 1) {
+            currentIdx++;
+            updatePresentation();
+        }
+    });
+
+    prevBtn.addEventListener('click', () => {
+        if(currentIdx > 0) {
+            currentIdx--;
+            updatePresentation();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if(e.key === 'ArrowRight' || e.key === ' ') {
+            if(currentIdx < slides.length - 1) {
+                currentIdx++;
+                updatePresentation();
+            }
+        } else if(e.key === 'ArrowLeft') {
+            if(currentIdx > 0) {
+                currentIdx--;
+                updatePresentation();
+            }
+        }
+    });
+</script>
+</body>
+</html>
